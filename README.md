@@ -8,6 +8,7 @@ Default controls:
 - Touchpad click - Trigger pull
 - App button - Application menu button
 - Home button - System button (opens SteamVR dashboard)
+- Hold home button - Recenters controller in the direction of the HMD
 
 I don't expect people to use it for actual VR game input since it's so limited, but maybe you could get something going through Steam Input. Plus, if you're using this driver it probably means you already have an HMD with *real* 6DoF controllers since this is **NOT** a way to stream VR games to your Daydream headset.
 
