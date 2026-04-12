@@ -1,0 +1,20 @@
+{
+  "json_id": "input_profile",
+  "controller_type": "daydream_remote",
+  "device_class": "TrackedController",
+  "input_source": {
+    "/input/trackpad": {
+      "type": "trackpad",
+      "click": true,
+      "touch": true
+    },
+    "/input/application_menu": {
+      "type": "button",
+      "click": true
+    },
+    "/input/system": {
+      "type": "button",
+      "click": true
+    }
+  }
+}
