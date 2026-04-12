@@ -1,5 +1,6 @@
 #include "DaydreamBLEHandler.h"
-#include "driver_log.h"
+#include <windows.h>
+#define DriverLog(...)
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Devices.Bluetooth.h>
@@ -16,6 +17,7 @@ using namespace Windows::Devices::Enumeration;
 
 struct DaydreamBLEHandler::Impl {
     BluetoothLEDevice m_device{ nullptr };
+    GattSession m_session{ nullptr };
     GattCharacteristic m_characteristic{ nullptr };
     winrt::event_token m_valueChangedToken;
     std::atomic<bool> m_isConnecting{false};
@@ -31,25 +33,39 @@ DaydreamBLEHandler::~DaydreamBLEHandler() {
     winrt::uninit_apartment();
 }
 
-void DaydreamBLEHandler::Start(std::function<void(const DaydreamData&)> onDataReceived) {
+void DaydreamBLEHandler::Start(std::function<void(const DaydreamData&)> onDataReceived, uint64_t bluetoothAddress, std::wstring knownDeviceId) {
     if (m_running) return;
     m_onDataReceived = onDataReceived;
     m_running = true;
     m_impl->m_isConnecting = true;
 
-    std::thread([this]() {
+    std::thread([this, bluetoothAddress, knownDeviceId]() {
         try {
-            auto selector = BluetoothLEDevice::GetDeviceSelectorFromDeviceName(L"Daydream controller");
-            auto devicesInfo = DeviceInformation::FindAllAsync(selector).get();
-            
-            if (devicesInfo.Size() == 0) {
-                DriverLog("DaydreamBLEHandler: No Daydream controller found.\n");
-                m_impl->m_isConnecting = false;
-                return;
-            }
+            if (bluetoothAddress != 0) {
+                m_impl->m_device = BluetoothLEDevice::FromBluetoothAddressAsync(bluetoothAddress).get();
+            } else if (!knownDeviceId.empty()) {
+                m_impl->m_device = BluetoothLEDevice::FromIdAsync(knownDeviceId).get();
+            } else {
+                winrt::hstring selector = L"System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\" AND System.Devices.Aep.IsPaired:=System.StructuredQueryType.Boolean#True";
+                auto devicesInfo = DeviceInformation::FindAllAsync(selector, { L"System.Devices.Aep.DeviceAddress" }, DeviceInformationKind::AssociationEndpoint).get();
+                
+                winrt::hstring deviceId;
+                for (auto&& info : devicesInfo) {
+                    std::wstring_view nameView = info.Name();
+                    if (nameView.find(L"Daydream") != std::wstring_view::npos || nameView.find(L"daydream") != std::wstring_view::npos) {
+                        deviceId = info.Id();
+                        break;
+                    }
+                }
 
-            auto deviceId = devicesInfo.GetAt(0).Id();
-            m_impl->m_device = BluetoothLEDevice::FromIdAsync(deviceId).get();
+                if (deviceId.empty()) {
+                    DriverLog("DaydreamBLEHandler: No Daydream controller found.\n");
+                    m_impl->m_isConnecting = false;
+                    return;
+                }
+
+                m_impl->m_device = BluetoothLEDevice::FromIdAsync(deviceId).get();
+            }
             
             if (!m_impl->m_device) {
                 DriverLog("DaydreamBLEHandler: Failed to connect to device.\n");
@@ -57,8 +73,17 @@ void DaydreamBLEHandler::Start(std::function<void(const DaydreamData&)> onDataRe
                 return;
             }
 
+            try {
+                m_impl->m_session = GattSession::FromDeviceIdAsync(m_impl->m_device.BluetoothDeviceId()).get();
+                if (m_impl->m_session) {
+                    m_impl->m_session.MaintainConnection(true);
+                }
+            } catch (...) {
+                DriverLog("DaydreamBLEHandler: Failed to initialize GattSession. Connection might drop.\n");
+            }
+
             guid serviceId = winrt::guid("0000fe55-0000-1000-8000-00805f9b34fb");
-            auto servicesResult = m_impl->m_device.GetGattServicesForUuidAsync(serviceId).get();
+            auto servicesResult = m_impl->m_device.GetGattServicesForUuidAsync(serviceId, BluetoothCacheMode::Cached).get();
             
             if (servicesResult.Status() != GattCommunicationStatus::Success || servicesResult.Services().Size() == 0) {
                 DriverLog("DaydreamBLEHandler: Failed to get GATT Service.\n");
@@ -68,7 +93,7 @@ void DaydreamBLEHandler::Start(std::function<void(const DaydreamData&)> onDataRe
 
             auto service = servicesResult.Services().GetAt(0);
             guid charId = winrt::guid("00000001-1000-1000-8000-00805f9b34fb");
-            auto charResult = service.GetCharacteristicsForUuidAsync(charId).get();
+            auto charResult = service.GetCharacteristicsForUuidAsync(charId, BluetoothCacheMode::Cached).get();
 
             if (charResult.Status() != GattCommunicationStatus::Success || charResult.Characteristics().Size() == 0) {
                 DriverLog("DaydreamBLEHandler: Failed to get GATT Characteristic.\n");
@@ -121,5 +146,11 @@ void DaydreamBLEHandler::Stop() {
     if (m_impl->m_device) {
         m_impl->m_device.Close();
         m_impl->m_device = nullptr;
+    }
+    
+    if (m_impl->m_session) {
+        try { m_impl->m_session.MaintainConnection(false); } catch(...) {}
+        m_impl->m_session.Close();
+        m_impl->m_session = nullptr;
     }
 }

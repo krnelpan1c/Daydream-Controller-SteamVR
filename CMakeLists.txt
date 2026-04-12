@@ -19,7 +19,6 @@ add_library(driver_daydream SHARED
     src/driver_log.cpp
     src/CDaydreamProvider.cpp
     src/CDaydreamController.cpp
-    src/DaydreamBLEHandler.cpp
 )
 
 # Include directories
@@ -41,17 +40,34 @@ else()
     set(PLATFORM "win32")
 endif()
 
-# Set output names and directories as SteamVR expects (e.g., driver_daydream/bin/win64/driver_daydream.dll)
+# Set output names and directories as SteamVR expects (e.g., daydream/bin/win64/driver_daydream.dll)
 set_target_properties(driver_daydream PROPERTIES
     PREFIX ""
     SUFFIX ".dll"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/driver_daydream/bin/${PLATFORM}"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/driver_daydream/bin/${PLATFORM}"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/daydream/bin/${PLATFORM}"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/daydream/bin/${PLATFORM}"
+    LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/daydream/bin/${PLATFORM}"
+    LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/daydream/bin/${PLATFORM}"
 )
 
 # Make sure driver resources (like the input profile) are copied next to the bin folder
 add_custom_command(TARGET driver_daydream POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/resources"
-        "${CMAKE_BINARY_DIR}/driver_daydream/resources"
+        "${CMAKE_BINARY_DIR}/daydream/resources"
+    COMMAND ${CMAKE_COMMAND} -E copy
+        "${CMAKE_CURRENT_SOURCE_DIR}/driver.vrdrivermanifest"
+        "${CMAKE_BINARY_DIR}/daydream/driver.vrdrivermanifest"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/build/_deps/openvr-src/bin/win64"
+        "${CMAKE_BINARY_DIR}/daydream/bin/win64"
+)
+
+# App target
+add_executable(app_daydream WIN32 src/app_main.cpp src/DaydreamBLEHandler.cpp)
+target_link_libraries(app_daydream PRIVATE windowsapp.lib user32.lib advapi32.lib)
+
+set_target_properties(app_daydream PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/daydream/bin/${PLATFORM}"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/daydream/bin/${PLATFORM}"
 )

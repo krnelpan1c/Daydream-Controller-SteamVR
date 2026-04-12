@@ -17,6 +17,7 @@ struct DaydreamData {
     float accelX, accelY, accelZ;
     float gyroX, gyroY, gyroZ;
     float oriX, oriY, oriZ;
+    bool touched;
 };
 
 class DaydreamPacketParser {
@@ -63,8 +64,17 @@ public:
 
         // Normalize touchpad 0..255 to 0.0..1.0
         // Or -1.0 to 1.0. Let's make it -1.0 to 1.0 since OpenVR uses -1 to 1.
-        result.touchX = ((data[16] / 255.0f) * 2.0f) - 1.0f;
-        result.touchY = ((data[17] / 255.0f) * 2.0f) - 1.0f;
+        int rawTouchX = extractBits(data, 131, 8);
+        int rawTouchY = extractBits(data, 139, 8);
+        if (rawTouchX == 0 && rawTouchY == 0) {
+            result.touched = false;
+            result.touchX = 0.0f;
+            result.touchY = 0.0f;
+        } else {
+            result.touched = true;
+            result.touchX = ((rawTouchX / 255.0f) * 2.0f) - 1.0f;
+            result.touchY = -(((rawTouchY / 255.0f) * 2.0f) - 1.0f); // Invert Y
+        }
 
         // Button state
         uint8_t buttons = data[18];

@@ -1,0 +1,7 @@
+{
+    "name": "daydream",
+    "directory": "",
+    "resourceOnly": false,
+    "hmd_presence": [],
+    "alwaysActivate": true
+}

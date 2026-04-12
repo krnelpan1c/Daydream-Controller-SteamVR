@@ -1,13 +1,14 @@
 #pragma once
 #include "DaydreamPacket.h"
 #include <functional>
+#include <string>
 
 class DaydreamBLEHandler {
 public:
     DaydreamBLEHandler();
     ~DaydreamBLEHandler();
 
-    void Start(std::function<void(const DaydreamData&)> onDataReceived);
+    void Start(std::function<void(const DaydreamData&)> onDataReceived, uint64_t bluetoothAddress = 0, std::wstring knownDeviceId = L"");
     void Stop();
 
 private:

@@ -3,7 +3,8 @@
 #include <string>
 #include <mutex>
 #include <chrono>
-#include "DaydreamBLEHandler.h"
+#include <atomic>
+#include "DaydreamPacket.h"
 
 class CDaydreamController : public vr::ITrackedDeviceServerDriver
 {
@@ -32,22 +33,29 @@ private:
     std::string m_serialNumber;
     std::string m_modelNumber;
 
-    DaydreamBLEHandler m_bleHandler;
     std::mutex m_poseMutex;
     vr::DriverPose_t m_pose;
 
     vr::VRInputComponentHandle_t m_compClick;
+    vr::VRInputComponentHandle_t m_compTriggerValue;
     vr::VRInputComponentHandle_t m_compTouch;
     vr::VRInputComponentHandle_t m_compApp;
     vr::VRInputComponentHandle_t m_compHome;
     vr::VRInputComponentHandle_t m_compTouchX;
     vr::VRInputComponentHandle_t m_compTouchY;
 
+    void* m_hPipe;
+    std::atomic<bool> m_pipeRunning;
+    void StartPipeClient();
+
     bool m_lastVolUp;
     bool m_lastVolDown;
-
     bool m_lastHome;
-    bool m_recenterTriggered;
+
     std::chrono::steady_clock::time_point m_homeDownTime;
+    bool m_recenterTriggered;
+    bool m_wantsRecenter;
     float m_yawOffset;
+    float m_lastHeadYaw;
+    int m_handRole;
 };

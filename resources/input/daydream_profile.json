@@ -8,6 +8,11 @@
       "click": true,
       "touch": true
     },
+    "/input/trigger": {
+      "type": "trigger",
+      "click": true,
+      "value": true
+    },
     "/input/application_menu": {
       "type": "button",
       "click": true
