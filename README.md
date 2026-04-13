@@ -9,6 +9,7 @@ Default controls:
 - App button - Application menu button
 - Home button - System button (opens SteamVR dashboard)
 - Hold home button - Recenters controller in the direction of the HMD
+- Vol up/down - Volume control for current desktop/HMD output device
 
 I don't expect people to use it for actual VR game input since it's so limited, but maybe you could get something going through Steam Input. Plus, if you're using this driver it probably means you already have an HMD with *real* 6DoF controllers since this is **NOT** a way to stream VR games to your Daydream headset. If you want to use Daydream as a SteamVR headset, combine this driver with ALVR or use iVRy which natively supports Daydream and the controller (e.g. if you're using a Mirage Solo or Daydream-ready phone and want to use the Daydream software)
 
