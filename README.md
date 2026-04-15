@@ -1,5 +1,6 @@
 # Daydream controller SteamVR driver
 This driver and app allows you to connect a Google Daydream controller to your PC and use it in SteamVR, appearing as a Vive wand. I mainly made this so I can use it as a media remote / navigation controller for when I just want to watch a movie in VR, as the Daydream controller is perfect since it's light, simple, and has a convenient volume rocker instead of having to open the SteamVR dashboard.
+
 Dependencies: [Visual Studio C++ Runtime (2017-2026)](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)
 
 Note: Requires Bluetooth adapter installed in PC. Not familiar with other HMDs, but the internal bluetooth on your HMD that the controllers use will probably not work with this.
