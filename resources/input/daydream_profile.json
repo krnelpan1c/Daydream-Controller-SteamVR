@@ -1,6 +1,6 @@
 {
   "json_id": "input_profile",
-  "controller_type": "daydream_remote",
+  "controller_type": "vive_controller",
   "device_class": "TrackedController",
   "input_source": {
     "/input/trackpad": {
@@ -12,6 +12,10 @@
       "type": "trigger",
       "click": true,
       "value": true
+    },
+    "/input/grip": {
+      "type": "button",
+      "click": true
     },
     "/input/application_menu": {
       "type": "button",

@@ -1,0 +1,9 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/cmake_install.cmake",
+		"C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-build/cmake_install.cmake",
+		"C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-build/src/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-subbuild\CMakeFiles\d632753d3e69496aaa85ff553a94fa64\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{1F65F6AD-947F-3EB3-B503-489D6472CEB3}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

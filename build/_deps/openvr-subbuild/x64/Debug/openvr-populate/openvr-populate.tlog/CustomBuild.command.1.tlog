@@ -1,0 +1,150 @@
+^C:\USERS\IVAN\DOCUMENTS\ANTIGRAVITY\DAYDREAM REMOTE STEAMVR\BUILD\_DEPS\OPENVR-SUBBUILD\CMAKEFILES\F9727615295E68B568C44856855B539E\OPENVR-POPULATE-MKDIR.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/openvr-populate-prefix/tmp/openvr-populate-mkdirs.cmake"
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/openvr-populate-prefix/src/openvr-populate-stamp/Debug/openvr-populate-mkdir"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\IVAN\DOCUMENTS\ANTIGRAVITY\DAYDREAM REMOTE STEAMVR\BUILD\_DEPS\OPENVR-SUBBUILD\CMAKEFILES\F9727615295E68B568C44856855B539E\OPENVR-POPULATE-DOWNLOAD.RULE
+setlocal
+cd "C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps"
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/openvr-populate-prefix/tmp/openvr-populate-gitclone.cmake"
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/openvr-populate-prefix/src/openvr-populate-stamp/Debug/openvr-populate-download"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\IVAN\DOCUMENTS\ANTIGRAVITY\DAYDREAM REMOTE STEAMVR\BUILD\_DEPS\OPENVR-SUBBUILD\CMAKEFILES\F9727615295E68B568C44856855B539E\OPENVR-POPULATE-UPDATE.RULE
+setlocal
+cd "C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-src"
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -Dcan_fetch=YES -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/openvr-populate-prefix/tmp/openvr-populate-gitupdate.cmake"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\IVAN\DOCUMENTS\ANTIGRAVITY\DAYDREAM REMOTE STEAMVR\BUILD\_DEPS\OPENVR-SUBBUILD\CMAKEFILES\F9727615295E68B568C44856855B539E\OPENVR-POPULATE-PATCH.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/openvr-populate-prefix/src/openvr-populate-stamp/Debug/openvr-populate-patch"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\IVAN\DOCUMENTS\ANTIGRAVITY\DAYDREAM REMOTE STEAMVR\BUILD\_DEPS\OPENVR-SUBBUILD\CMAKEFILES\F9727615295E68B568C44856855B539E\OPENVR-POPULATE-CONFIGURE.RULE
+setlocal
+cd "C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-build"
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/openvr-populate-prefix/src/openvr-populate-stamp/Debug/openvr-populate-configure"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\IVAN\DOCUMENTS\ANTIGRAVITY\DAYDREAM REMOTE STEAMVR\BUILD\_DEPS\OPENVR-SUBBUILD\CMAKEFILES\F9727615295E68B568C44856855B539E\OPENVR-POPULATE-BUILD.RULE
+setlocal
+cd "C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-build"
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/openvr-populate-prefix/src/openvr-populate-stamp/Debug/openvr-populate-build"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\IVAN\DOCUMENTS\ANTIGRAVITY\DAYDREAM REMOTE STEAMVR\BUILD\_DEPS\OPENVR-SUBBUILD\CMAKEFILES\F9727615295E68B568C44856855B539E\OPENVR-POPULATE-INSTALL.RULE
+setlocal
+cd "C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-build"
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/openvr-populate-prefix/src/openvr-populate-stamp/Debug/openvr-populate-install"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\IVAN\DOCUMENTS\ANTIGRAVITY\DAYDREAM REMOTE STEAMVR\BUILD\_DEPS\OPENVR-SUBBUILD\CMAKEFILES\F9727615295E68B568C44856855B539E\OPENVR-POPULATE-TEST.RULE
+setlocal
+cd "C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-build"
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/openvr-populate-prefix/src/openvr-populate-stamp/Debug/openvr-populate-test"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\IVAN\DOCUMENTS\ANTIGRAVITY\DAYDREAM REMOTE STEAMVR\BUILD\_DEPS\OPENVR-SUBBUILD\CMAKEFILES\022D27FE90DF82D1B7985127CBA83592\OPENVR-POPULATE-COMPLETE.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/CMakeFiles/Debug"
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/CMakeFiles/Debug/openvr-populate-complete"
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/openvr-populate-prefix/src/openvr-populate-stamp/Debug/openvr-populate-done"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\IVAN\DOCUMENTS\ANTIGRAVITY\DAYDREAM REMOTE STEAMVR\BUILD\_DEPS\OPENVR-SUBBUILD\CMAKEFILES\D632753D3E69496AAA85FF553A94FA64\OPENVR-POPULATE.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\IVAN\DOCUMENTS\ANTIGRAVITY\DAYDREAM REMOTE STEAMVR\BUILD\_DEPS\OPENVR-SUBBUILD\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild" "-BC:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild" --check-stamp-file "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

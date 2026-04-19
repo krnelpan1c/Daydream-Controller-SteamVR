@@ -1,0 +1,10 @@
+^C:\USERS\IVAN\DOCUMENTS\ANTIGRAVITY\DAYDREAM REMOTE STEAMVR\BUILD\_DEPS\OPENVR-SUBBUILD\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild" "-BC:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild" --check-stamp-file "C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

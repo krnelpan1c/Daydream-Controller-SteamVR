@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-src\src\openvr_api_public.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-src\src\jsoncpp.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-src\src\vrcore\dirtools_public.cpp">
+      <Filter>VRCore</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-src\src\vrcore\envvartools_public.cpp">
+      <Filter>VRCore</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-src\src\vrcore\pathtools_public.cpp">
+      <Filter>VRCore</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-src\src\vrcore\sharedlibtools_public.cpp">
+      <Filter>VRCore</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-src\src\vrcore\hmderrors_public.cpp">
+      <Filter>VRCore</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-src\src\vrcore\vrpathregistry_public.cpp">
+      <Filter>VRCore</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-src\src\vrcore\strtools_public.cpp">
+      <Filter>VRCore</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Ivan\Documents\Antigravity\Daydream Remote SteamVR\build\_deps\openvr-src\src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Src">
+      <UniqueIdentifier>{13A7CB2E-3DBB-35FD-BC6A-0E2D97E6ECDD}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VRCore">
+      <UniqueIdentifier>{72E8B5C0-B281-3D78-B975-3AEF51EE2656}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -22,12 +22,17 @@ inline vr::HmdQuaternion_t EulerToQuaternion(double yaw, double pitch,
   return q;
 }
 
-CDaydreamController::CDaydreamController()
+CDaydreamController::CDaydreamController(int handRole)
     : m_unObjectId(vr::k_unTrackedDeviceIndexInvalid),
       m_ulPropertyContainer(vr::k_ulInvalidPropertyContainer),
       m_pipeRunning(false), m_isConnected(false), m_isRegistered(false),
       m_hPipe(INVALID_HANDLE_VALUE) {
-  m_serialNumber = "DD_REMOTE_001";
+  m_handRole = handRole;
+  if (m_handRole == vr::TrackedControllerRole_LeftHand) {
+    m_serialNumber = "DD_REMOTE_LEFT";
+  } else {
+    m_serialNumber = "DD_REMOTE_RIGHT";
+  }
   m_modelNumber = "Daydream Controller";
 
   m_pose = {0};
@@ -49,7 +54,9 @@ CDaydreamController::CDaydreamController()
   m_wantsRecenter = false;
   m_yawOffset = 0.0f;
   m_lastHeadYaw = 0.0f;
-  m_handRole = vr::TrackedControllerRole_RightHand;
+  m_lastTouchX = 0.0f;
+  m_lastTouchY = 0.0f;
+  m_lastDataTime = std::chrono::steady_clock::now();
   StartPipeClient();
 }
 
@@ -66,8 +73,12 @@ vr::EVRInitError CDaydreamController::Activate(uint32_t unObjectId) {
   char path[MAX_PATH];
   ExpandEnvironmentStringsA("%LOCALAPPDATA%\\DaydreamSteamVR\\settings.ini",
                             path, MAX_PATH);
-  m_handRole = GetPrivateProfileIntA("Settings", "HandRole",
-                                     vr::TrackedControllerRole_RightHand, path);
+
+  m_mapClick = GetPrivateProfileIntA("Settings", "MapClick", 1, path); // Trigger default
+  m_mapApp = GetPrivateProfileIntA("Settings", "MapApp", 3, path);     // App default
+  m_mapHome = GetPrivateProfileIntA("Settings", "MapHome", 4, path);   // System default
+  m_mapVolUp = GetPrivateProfileIntA("Settings", "MapVolUp", 5, path);
+  m_mapVolDown = GetPrivateProfileIntA("Settings", "MapVolDown", 6, path);
 
   vr::VRProperties()->SetStringProperty(m_ulPropertyContainer,
                                         vr::Prop_RenderModelName_String,
@@ -86,6 +97,10 @@ vr::EVRInitError CDaydreamController::Activate(uint32_t unObjectId) {
   vr::VRDriverInput()->CreateScalarComponent(
       m_ulPropertyContainer, "/input/trigger/value", &m_compTriggerValue,
       vr::VRScalarType_Absolute, vr::VRScalarUnits_NormalizedOneSided);
+  vr::VRDriverInput()->CreateBooleanComponent(
+      m_ulPropertyContainer, "/input/grip/click", &m_compGrip);
+  vr::VRDriverInput()->CreateBooleanComponent(
+      m_ulPropertyContainer, "/input/trackpad/click", &m_compTrackpadClick);
   vr::VRDriverInput()->CreateBooleanComponent(
       m_ulPropertyContainer, "/input/trackpad/touch", &m_compTouch);
   vr::VRDriverInput()->CreateBooleanComponent(
@@ -132,6 +147,15 @@ vr::DriverPose_t CDaydreamController::GetPose() {
 
 void CDaydreamController::RunFrame() {
   if (m_unObjectId != vr::k_unTrackedDeviceIndexInvalid) {
+    if (m_isConnected) {
+      auto now = std::chrono::steady_clock::now();
+      if (std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastDataTime).count() > 1000) {
+        m_isConnected = false;
+        std::lock_guard<std::mutex> lock(m_poseMutex);
+        m_pose.deviceIsConnected = false;
+        DriverLog("CDaydreamController: Data timeout. Disconnecting device.\n");
+      }
+    }
     vr::VRServerDriverHost()->TrackedDevicePoseUpdated(
         m_unObjectId, GetPose(), sizeof(vr::DriverPose_t));
   }
@@ -141,15 +165,14 @@ void CDaydreamController::StartPipeClient() {
   m_pipeRunning = true;
   std::thread([this]() {
     while (m_pipeRunning) {
-      m_hPipe = CreateFileA("\\\\.\\pipe\\DaydreamSteamVR", GENERIC_READ, 0,
+      std::string pipeName = "\\\\.\\pipe\\DaydreamSteamVR_";
+      pipeName += (m_handRole == vr::TrackedControllerRole_LeftHand) ? "Left" : "Right";
+
+      m_hPipe = CreateFileA(pipeName.c_str(), GENERIC_READ, 0,
                             NULL, OPEN_EXISTING, 0, NULL);
       if (m_hPipe != INVALID_HANDLE_VALUE) {
-        m_isConnected = true;
-        {
-          std::lock_guard<std::mutex> lock(m_poseMutex);
-          m_pose.deviceIsConnected = true;
-        }
-
+        // We dont connect device instantly. We wait for HandleData to do it.
+        
         DWORD mode = PIPE_READMODE_MESSAGE;
         SetNamedPipeHandleState(m_hPipe, &mode, NULL, NULL);
         DaydreamData data;
@@ -176,10 +199,29 @@ void CDaydreamController::StartPipeClient() {
   }).detach();
 }
 
+bool CDaydreamController::isTargetActive(int target, const DaydreamData &data) {
+  bool active = false;
+  if (m_mapClick == target && data.click) active = true;
+  if (m_mapApp == target && data.app) active = true;
+  if (m_mapHome == target && data.home) active = true;
+  if (m_mapVolUp == target && data.volUp) active = true;
+  if (m_mapVolDown == target && data.volDown) active = true;
+  return active;
+}
+
 void CDaydreamController::HandleData(const DaydreamData &data) {
   UpdatePose(data);
+  m_lastDataTime = std::chrono::steady_clock::now();
 
-  bool homePressed = data.home;
+  if (!m_isConnected) {
+     m_isConnected = true;
+     std::lock_guard<std::mutex> lock(m_poseMutex);
+     m_pose.deviceIsConnected = true;
+     DriverLog("CDaydreamController: Data flowing. Device Connected.\n");
+  }
+
+  bool homePressed = isTargetActive(4, data); // System (Home)
+
   if (homePressed && !m_lastHome) {
     m_homeDownTime = std::chrono::steady_clock::now();
     m_recenterTriggered = false;
@@ -199,14 +241,27 @@ void CDaydreamController::HandleData(const DaydreamData &data) {
 
   m_lastHome = homePressed;
 
-  vr::VRDriverInput()->UpdateBooleanComponent(m_compClick, data.click, 0);
+  bool clickActive = isTargetActive(0, data);
+  bool triggerActive = isTargetActive(1, data);
+  bool gripActive = isTargetActive(2, data);
+  bool appActive = isTargetActive(3, data);
+
+  vr::VRDriverInput()->UpdateBooleanComponent(m_compTrackpadClick, clickActive, 0);
+  vr::VRDriverInput()->UpdateBooleanComponent(m_compClick, triggerActive, 0);
   vr::VRDriverInput()->UpdateScalarComponent(m_compTriggerValue,
-                                             data.click ? 1.0f : 0.0f, 0);
+                                             triggerActive ? 1.0f : 0.0f, 0);
+  vr::VRDriverInput()->UpdateBooleanComponent(m_compGrip, gripActive, 0);
   vr::VRDriverInput()->UpdateBooleanComponent(m_compTouch, data.touched, 0);
-  vr::VRDriverInput()->UpdateBooleanComponent(m_compApp, data.app, 0);
+  vr::VRDriverInput()->UpdateBooleanComponent(m_compApp, appActive, 0);
   vr::VRDriverInput()->UpdateBooleanComponent(m_compHome, homePressed, 0);
-  vr::VRDriverInput()->UpdateScalarComponent(m_compTouchX, data.touchX, 0);
-  vr::VRDriverInput()->UpdateScalarComponent(m_compTouchY, data.touchY, 0);
+
+  if (data.touched) {
+    m_lastTouchX = data.touchX;
+    m_lastTouchY = data.touchY;
+  }
+
+  vr::VRDriverInput()->UpdateScalarComponent(m_compTouchX, m_lastTouchX, 0);
+  vr::VRDriverInput()->UpdateScalarComponent(m_compTouchY, m_lastTouchY, 0);
 
   HandleMediaKeys(data);
 }
@@ -271,13 +326,19 @@ void CDaydreamController::UpdatePose(const DaydreamData &data) {
     float headY = mat.m[1][3];
     float headZ = mat.m[2][3];
 
-    float sign =
-        (m_handRole == vr::TrackedControllerRole_LeftHand) ? -1.0f : 1.0f;
-    float shoulderOffsetX =
-        cos(m_lastHeadYaw) * (0.15f * sign) + sin(m_lastHeadYaw) * 0.05f;
+    float sign = (m_handRole == vr::TrackedControllerRole_LeftHand) ? -1.0f : 1.0f;
+    
+    // Right vector of HMD
+    float rx = mat.m[0][0]; 
+    float rz = mat.m[2][0];
+    
+    // Forward vector (-Z) of HMD
+    float fx = -mat.m[0][2];
+    float fz = -mat.m[2][2];
+
+    float shoulderOffsetX = rx * (0.15f * sign) + fx * 0.05f;
     float shoulderOffsetY = -0.30f;
-    float shoulderOffsetZ =
-        -sin(m_lastHeadYaw) * (0.15f * sign) + cos(m_lastHeadYaw) * 0.05f;
+    float shoulderOffsetZ = rz * (0.15f * sign) + fz * 0.05f;
 
     float shoulderX = headX + shoulderOffsetX;
     float shoulderY = headY + shoulderOffsetY;
@@ -302,19 +363,22 @@ void CDaydreamController::UpdatePose(const DaydreamData &data) {
 }
 
 void CDaydreamController::HandleMediaKeys(const DaydreamData &data) {
-  if (data.volUp && !m_lastVolUp) {
+  bool volUpActive = isTargetActive(5, data);
+  bool volDownActive = isTargetActive(6, data);
+
+  if (volUpActive && !m_lastVolUp) {
     INPUT inputs[1] = {};
     inputs[0].type = INPUT_KEYBOARD;
     inputs[0].ki.wVk = VK_VOLUME_UP;
     SendInput(1, inputs, sizeof(INPUT));
   }
-  m_lastVolUp = data.volUp;
+  m_lastVolUp = volUpActive;
 
-  if (data.volDown && !m_lastVolDown) {
+  if (volDownActive && !m_lastVolDown) {
     INPUT inputs[1] = {};
     inputs[0].type = INPUT_KEYBOARD;
     inputs[0].ki.wVk = VK_VOLUME_DOWN;
     SendInput(1, inputs, sizeof(INPUT));
   }
-  m_lastVolDown = data.volDown;
+  m_lastVolDown = volDownActive;
 }

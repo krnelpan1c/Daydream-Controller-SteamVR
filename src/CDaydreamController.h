@@ -8,7 +8,7 @@
 
 class CDaydreamController : public vr::ITrackedDeviceServerDriver {
 public:
-  CDaydreamController();
+  CDaydreamController(int handRole);
   virtual ~CDaydreamController();
 
   bool IsRegistered() const { return m_isRegistered; }
@@ -40,8 +40,10 @@ private:
   std::mutex m_poseMutex;
   vr::DriverPose_t m_pose;
 
-  vr::VRInputComponentHandle_t m_compClick;
+  vr::VRInputComponentHandle_t m_compClick; // trigger click
   vr::VRInputComponentHandle_t m_compTriggerValue;
+  vr::VRInputComponentHandle_t m_compGrip;
+  vr::VRInputComponentHandle_t m_compTrackpadClick;
   vr::VRInputComponentHandle_t m_compTouch;
   vr::VRInputComponentHandle_t m_compApp;
   vr::VRInputComponentHandle_t m_compHome;
@@ -59,9 +61,20 @@ private:
   bool m_lastHome;
 
   std::chrono::steady_clock::time_point m_homeDownTime;
+  std::chrono::steady_clock::time_point m_lastDataTime;
   bool m_recenterTriggered;
   bool m_wantsRecenter;
   float m_yawOffset;
   float m_lastHeadYaw;
   int m_handRole;
+  float m_lastTouchX;
+  float m_lastTouchY;
+
+  int m_mapClick;
+  int m_mapApp;
+  int m_mapHome;
+  int m_mapVolUp;
+  int m_mapVolDown;
+  
+  bool isTargetActive(int target, const DaydreamData &data);
 };

@@ -6,7 +6,8 @@ vr::EVRInitError CDaydreamProvider::Init(vr::IVRDriverContext *pDriverContext) {
   g_pDriverLog = vr::VRDriverLog();
   DriverLog("CDaydreamProvider::Init - Initializing Daydream Provider\n");
 
-  m_controllers.push_back(std::make_unique<CDaydreamController>());
+  m_controllers.push_back(std::make_unique<CDaydreamController>(vr::TrackedControllerRole_LeftHand));
+  m_controllers.push_back(std::make_unique<CDaydreamController>(vr::TrackedControllerRole_RightHand));
 
   return vr::VRInitError_None;
 }
