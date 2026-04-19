@@ -1,3 +1,0 @@
-C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/CMakeFiles/openvr-populate.dir
-C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/CMakeFiles/ALL_BUILD.dir
-C:/Users/Ivan/Documents/Antigravity/Daydream Remote SteamVR/build/_deps/openvr-subbuild/CMakeFiles/ZERO_CHECK.dir
