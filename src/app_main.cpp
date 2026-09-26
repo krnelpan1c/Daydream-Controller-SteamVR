@@ -9,6 +9,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <map>
 #include <mutex>
 #include <memory>
 #include <winrt/Windows.Devices.Bluetooth.Advertisement.h>
@@ -241,12 +242,58 @@ void InstallDriver(HWND hwnd) {
   UpdateStatus(hwnd, "Failed to run vrpathreg.exe. Is SteamVR installed?");
 }
 
+bool IsDaydreamAdvertisement(BluetoothLEAdvertisementReceivedEventArgs const &args) {
+  std::wstring_view nameView = args.Advertisement().LocalName();
+  if (nameView.find(L"Daydream") != std::wstring_view::npos || nameView.find(L"daydream") != std::wstring_view::npos) return true;
+  for (auto &&uuid : args.Advertisement().ServiceUuids()) {
+    if (uuid == winrt::guid("0000fe55-0000-1000-8000-00805f9b34fb") || uuid == winrt::guid("0000fef5-0000-1000-8000-00805f9b34fb")) return true;
+  }
+  return false;
+}
+
+// Addresses with a pairing attempt in progress or recently tried, so repeated advertisements
+// from the same controller don't pile up pairing attempts.
+std::map<uint64_t, uint64_t> g_pairAttempts;
+std::mutex g_pairAttemptsMutex;
+const uint64_t kPairRetryCooldownMs = 5000;
+
+void PairAndConnect(HWND hwnd, uint64_t addr) {
+  winrt::init_apartment();
+  try {
+    auto device = BluetoothLEDevice::FromBluetoothAddressAsync(addr).get();
+    if (device && device.DeviceInformation().Pairing().CanPair()) {
+      auto custom = device.DeviceInformation().Pairing().Custom();
+      auto token = custom.PairingRequested([](DeviceInformationCustomPairing const &, DevicePairingRequestedEventArgs const &args) { args.Accept(); });
+      auto result = custom.PairAsync(DevicePairingKinds::ConfirmOnly).get();
+      custom.PairingRequested(token);
+
+      if (result.Status() == DevicePairingResultStatus::Paired || result.Status() == DevicePairingResultStatus::AlreadyPaired) {
+        std::string devIdStr = winrt::to_string(device.DeviceInformation().Id());
+        std::lock_guard<std::mutex> lock(g_handlersMutex);
+        bool exists = false;
+        for (auto &h : g_bleHandlers) {
+          if (h->GetBluetoothAddress() == addr) { exists = true; break; }
+        }
+        if (!exists) {
+          auto handler = std::make_unique<DaydreamBLEHandler>();
+          handler->Start([devIdStr](const DaydreamData &data) { RouteData(devIdStr, data); }, addr, L"");
+          g_bleHandlers.push_back(std::move(handler));
+          UpdateStatus(hwnd, "New controller paired and connected.");
+        }
+      }
+    }
+  } catch (...) {}
+  winrt::uninit_apartment();
+}
+
 void ConnectControllersBackground(HWND hwnd) {
   UpdateStatus(hwnd, "Scanning for Daydream controllers (Make sure white LED is pulsing to pair)...");
   std::thread([hwnd]() {
     try {
       winrt::init_apartment();
 
+      // Start a connect loop for every already-paired controller. Each loop keeps retrying until
+      // its controller wakes up, rather than giving up after one attempt.
       auto selector = L"System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\" AND System.Devices.Aep.IsPaired:=System.StructuredQueryType.Boolean#True";
       auto devicesInfo = DeviceInformation::FindAllAsync(selector, {L"System.Devices.Aep.DeviceAddress"}, DeviceInformationKind::AssociationEndpoint).get();
       
@@ -264,36 +311,32 @@ void ConnectControllersBackground(HWND hwnd) {
       BluetoothLEAdvertisementWatcher watcher;
       watcher.ScanningMode(BluetoothLEScanningMode::Active);
       watcher.Received([hwnd](BluetoothLEAdvertisementWatcher const &, BluetoothLEAdvertisementReceivedEventArgs const &args) {
-          bool isDaydream = false;
-          std::wstring_view nameView = args.Advertisement().LocalName();
-          if (nameView.find(L"Daydream") != std::wstring_view::npos || nameView.find(L"daydream") != std::wstring_view::npos) isDaydream = true;
-          else {
-              for (auto &&uuid : args.Advertisement().ServiceUuids()) {
-                  if (uuid == winrt::guid("0000fe55-0000-1000-8000-00805f9b34fb") || uuid == winrt::guid("0000fef5-0000-1000-8000-00805f9b34fb")) { isDaydream = true; break; }
-              }
-          }
-          if (isDaydream) {
-              uint64_t addr = args.BluetoothAddress();
-              try {
-                  auto device = BluetoothLEDevice::FromBluetoothAddressAsync(addr).get();
-                  if (device && device.DeviceInformation().Pairing().CanPair()) {
-                      auto custom = device.DeviceInformation().Pairing().Custom();
-                      auto token = std::make_shared<winrt::event_token>();
-                      *token = custom.PairingRequested([token, custom](DeviceInformationCustomPairing const &, DevicePairingRequestedEventArgs const &args) { args.Accept(); });
-                      auto result = custom.PairAsync(DevicePairingKinds::ConfirmOnly).get();
-                      custom.PairingRequested(*token);
+          uint64_t addr = args.BluetoothAddress();
+          bool isDaydream = IsDaydreamAdvertisement(args);
 
-                      if (result.Status() == DevicePairingResultStatus::Paired || result.Status() == DevicePairingResultStatus::AlreadyPaired) {
-                          std::string devIdStr = winrt::to_string(device.DeviceInformation().Id());
-                          auto handler = std::make_unique<DaydreamBLEHandler>();
-                          handler->Start([devIdStr](const DaydreamData &data) { RouteData(devIdStr, data); }, addr, L"");
-                          std::lock_guard<std::mutex> lock(g_handlersMutex);
-                          g_bleHandlers.push_back(std::move(handler));
-                          UpdateStatus(hwnd, "New controller paired and connected.");
-                      }
-                  }
-              } catch (...) {}
+          {
+            std::lock_guard<std::mutex> lock(g_handlersMutex);
+            // A known controller is advertising, so it's awake and connectable right now.
+            // Directed reconnect advertisements carry no name or UUIDs, so match on address.
+            for (auto &h : g_bleHandlers) {
+              if (h->GetBluetoothAddress() == addr) { h->NotifyAdvertisement(); return; }
+            }
+            if (!isDaydream) return;
+            // Unknown address (e.g. the controller changed its address): wake any loop still waiting.
+            for (auto &h : g_bleHandlers) {
+              if (!h->IsSubscribed()) h->NotifyAdvertisement();
+            }
           }
+
+          // Pair on a separate thread so this callback never blocks on pairing.
+          uint64_t now = GetTickCount64();
+          {
+            std::lock_guard<std::mutex> lock(g_pairAttemptsMutex);
+            auto it = g_pairAttempts.find(addr);
+            if (it != g_pairAttempts.end() && now - it->second < kPairRetryCooldownMs) return;
+            g_pairAttempts[addr] = now;
+          }
+          std::thread(PairAndConnect, hwnd, addr).detach();
       });
       watcher.Start();
       while(true) Sleep(10000); 
@@ -428,7 +471,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     break;
 
   case WM_DESTROY:
-    for (auto& handler : g_bleHandlers) handler->Stop();
+    {
+      std::lock_guard<std::mutex> lock(g_handlersMutex);
+      for (auto& handler : g_bleHandlers) handler->Stop();
+    }
     Shell_NotifyIconA(NIM_DELETE, &g_nid);
     PostQuitMessage(0);
     return 0;
