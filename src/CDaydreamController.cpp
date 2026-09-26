@@ -1,7 +1,7 @@
 #include "CDaydreamController.h"
+#include "DaydreamSettings.h"
 #include "driver_log.h"
 #include <cmath>
-#include <thread>
 #include <windows.h>
 
 inline vr::HmdQuaternion_t EulerToQuaternion(double yaw, double pitch,
@@ -25,8 +25,12 @@ inline vr::HmdQuaternion_t EulerToQuaternion(double yaw, double pitch,
 CDaydreamController::CDaydreamController(int handRole)
     : m_unObjectId(vr::k_unTrackedDeviceIndexInvalid),
       m_ulPropertyContainer(vr::k_ulInvalidPropertyContainer),
-      m_pipeRunning(false), m_isConnected(false), m_isRegistered(false),
-      m_hPipe(INVALID_HANDLE_VALUE) {
+      m_isConnected(false), m_isRegistered(false),
+      m_mapClick(DaydreamSettings::kDefaultMapClick),
+      m_mapApp(DaydreamSettings::kDefaultMapApp),
+      m_mapHome(DaydreamSettings::kDefaultMapHome),
+      m_mapVolUp(DaydreamSettings::kDefaultMapVolUp),
+      m_mapVolDown(DaydreamSettings::kDefaultMapVolDown) {
   m_handRole = handRole;
   if (m_handRole == vr::TrackedControllerRole_LeftHand) {
     m_serialNumber = "DD_REMOTE_LEFT";
@@ -54,13 +58,22 @@ CDaydreamController::CDaydreamController(int handRole)
   m_wantsRecenter = false;
   m_yawOffset = 0.0f;
   m_lastHeadYaw = 0.0f;
+  m_torsoYaw = 0.0f;
+  m_torsoYawValid = false;
   m_lastTouchX = 0.0f;
   m_lastTouchY = 0.0f;
   m_lastDataTime = std::chrono::steady_clock::now();
-  StartPipeClient();
 }
 
-CDaydreamController::~CDaydreamController() { m_pipeRunning = false; }
+CDaydreamController::~CDaydreamController() {}
+
+void CDaydreamController::SetMappings(const ButtonMappings &mappings) {
+  m_mapClick = mappings.click;
+  m_mapApp = mappings.app;
+  m_mapHome = mappings.home;
+  m_mapVolUp = mappings.volUp;
+  m_mapVolDown = mappings.volDown;
+}
 
 vr::EVRInitError CDaydreamController::Activate(uint32_t unObjectId) {
   m_unObjectId = unObjectId;
@@ -70,16 +83,6 @@ vr::EVRInitError CDaydreamController::Activate(uint32_t unObjectId) {
   vr::VRProperties()->SetStringProperty(m_ulPropertyContainer,
                                         vr::Prop_ModelNumber_String,
                                         m_modelNumber.c_str());
-  char path[MAX_PATH];
-  ExpandEnvironmentStringsA("%LOCALAPPDATA%\\DaydreamSteamVR\\settings.ini",
-                            path, MAX_PATH);
-
-  m_mapClick = GetPrivateProfileIntA("Settings", "MapClick", 1, path); // Trigger default
-  m_mapApp = GetPrivateProfileIntA("Settings", "MapApp", 3, path);     // App default
-  m_mapHome = GetPrivateProfileIntA("Settings", "MapHome", 4, path);   // System default
-  m_mapVolUp = GetPrivateProfileIntA("Settings", "MapVolUp", 5, path);
-  m_mapVolDown = GetPrivateProfileIntA("Settings", "MapVolDown", 6, path);
-
   vr::VRProperties()->SetStringProperty(m_ulPropertyContainer,
                                         vr::Prop_RenderModelName_String,
                                         "vr_controller_vive_1_5");
@@ -118,11 +121,6 @@ vr::EVRInitError CDaydreamController::Activate(uint32_t unObjectId) {
 }
 
 void CDaydreamController::Deactivate() {
-  m_pipeRunning = false;
-  if (m_hPipe != INVALID_HANDLE_VALUE) {
-    CloseHandle(m_hPipe);
-    m_hPipe = INVALID_HANDLE_VALUE;
-  }
   m_unObjectId = vr::k_unTrackedDeviceIndexInvalid;
 }
 
@@ -159,44 +157,6 @@ void CDaydreamController::RunFrame() {
     vr::VRServerDriverHost()->TrackedDevicePoseUpdated(
         m_unObjectId, GetPose(), sizeof(vr::DriverPose_t));
   }
-}
-
-void CDaydreamController::StartPipeClient() {
-  m_pipeRunning = true;
-  std::thread([this]() {
-    while (m_pipeRunning) {
-      std::string pipeName = "\\\\.\\pipe\\DaydreamSteamVR_";
-      pipeName += (m_handRole == vr::TrackedControllerRole_LeftHand) ? "Left" : "Right";
-
-      m_hPipe = CreateFileA(pipeName.c_str(), GENERIC_READ, 0,
-                            NULL, OPEN_EXISTING, 0, NULL);
-      if (m_hPipe != INVALID_HANDLE_VALUE) {
-        // We dont connect device instantly. We wait for HandleData to do it.
-        
-        DWORD mode = PIPE_READMODE_MESSAGE;
-        SetNamedPipeHandleState(m_hPipe, &mode, NULL, NULL);
-        DaydreamData data;
-        DWORD bytesRead = 0;
-        while (
-            m_pipeRunning &&
-            ReadFile(m_hPipe, &data, sizeof(DaydreamData), &bytesRead, NULL) &&
-            bytesRead == sizeof(DaydreamData)) {
-          HandleData(data);
-        }
-
-        m_isConnected = false;
-        {
-          std::lock_guard<std::mutex> lock(m_poseMutex);
-          m_pose.deviceIsConnected = false;
-        }
-
-        CloseHandle(m_hPipe);
-        m_hPipe = INVALID_HANDLE_VALUE;
-      } else {
-        Sleep(200); // Wait for app to connect
-      }
-    }
-  }).detach();
 }
 
 bool CDaydreamController::isTargetActive(int target, const DaydreamData &data) {
@@ -309,6 +269,8 @@ void CDaydreamController::UpdatePose(const DaydreamData &data) {
 
   if (m_wantsRecenter) {
     m_yawOffset = m_lastHeadYaw - yaw_sensor;
+    m_torsoYaw = m_lastHeadYaw;
+    m_torsoYawValid = true;
     m_wantsRecenter = false;
   }
 
@@ -320,33 +282,49 @@ void CDaydreamController::UpdatePose(const DaydreamData &data) {
   q.y = cy * q_sensor.y + sy * q_sensor.w;
   q.z = cy * q_sensor.z - sy * q_sensor.x;
 
+  // Controller forward (-Z) in world space.
+  float dirX = -2.0f * (q.x * q.z + q.w * q.y);
+  float dirY = -2.0f * (q.y * q.z - q.w * q.x);
+  float dirZ = -(1.0f - 2.0f * (q.x * q.x + q.y * q.y));
+
+  // The torso faces its own direction, independent of head yaw, so looking around doesn't
+  // swing the arm. It only turns when the controller points further than kTorsoDeadzone to
+  // either side, like turning in a chair. Skip when pointing near straight up/down, where
+  // the controller's yaw is unstable.
+  const float kTorsoDeadzone = 45.0f * (float)M_PI / 180.0f;
+  if (sqrt(dirX * dirX + dirZ * dirZ) > 0.3f) {
+    float controllerYaw = atan2(dirX, dirZ);
+    if (!m_torsoYawValid) {
+      m_torsoYaw = controllerYaw;
+      m_torsoYawValid = true;
+    }
+    float diff = remainderf(controllerYaw - m_torsoYaw, 2.0f * (float)M_PI);
+    if (diff > kTorsoDeadzone) m_torsoYaw += diff - kTorsoDeadzone;
+    else if (diff < -kTorsoDeadzone) m_torsoYaw += diff + kTorsoDeadzone;
+  }
+
   if (bPoseIsValid) {
     auto &mat = poses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking;
-    float headX = mat.m[0][3];
-    float headY = mat.m[1][3];
-    float headZ = mat.m[2][3];
+
+    // Pivot around the neck rather than the HMD: the eyes sit in front of and above the neck,
+    // so the HMD itself moves in an arc whenever the head turns. (Head space: +Y up, +Z back.)
+    const float kNeckDown = 0.075f;
+    const float kNeckBack = 0.08f;
+    float neckX = mat.m[0][3] - mat.m[0][1] * kNeckDown + mat.m[0][2] * kNeckBack;
+    float neckY = mat.m[1][3] - mat.m[1][1] * kNeckDown + mat.m[1][2] * kNeckBack;
+    float neckZ = mat.m[2][3] - mat.m[2][1] * kNeckDown + mat.m[2][2] * kNeckBack;
 
     float sign = (m_handRole == vr::TrackedControllerRole_LeftHand) ? -1.0f : 1.0f;
-    
-    // Right vector of HMD
-    float rx = mat.m[0][0]; 
-    float rz = mat.m[2][0];
-    
-    // Forward vector (-Z) of HMD
-    float fx = -mat.m[0][2];
-    float fz = -mat.m[2][2];
 
-    float shoulderOffsetX = rx * (0.15f * sign) + fx * 0.05f;
-    float shoulderOffsetY = -0.30f;
-    float shoulderOffsetZ = rz * (0.15f * sign) + fz * 0.05f;
+    // Torso forward and right vectors from the torso yaw.
+    float fx = sin(m_torsoYaw);
+    float fz = cos(m_torsoYaw);
+    float rx = -fz;
+    float rz = fx;
 
-    float shoulderX = headX + shoulderOffsetX;
-    float shoulderY = headY + shoulderOffsetY;
-    float shoulderZ = headZ + shoulderOffsetZ;
-
-    float dirX = -2.0f * (q.x * q.z + q.w * q.y);
-    float dirY = -2.0f * (q.y * q.z - q.w * q.x);
-    float dirZ = -(1.0f - 2.0f * (q.x * q.x + q.y * q.y));
+    float shoulderX = neckX + rx * (0.15f * sign) + fx * 0.13f;
+    float shoulderY = neckY - 0.225f;
+    float shoulderZ = neckZ + rz * (0.15f * sign) + fz * 0.13f;
 
     float armLength = 0.25f;
 

@@ -6,6 +6,15 @@
 #include <openvr_driver.h>
 #include <string>
 
+// Target each Daydream button is mapped to (see DaydreamSettings::Target).
+struct ButtonMappings {
+  int click;
+  int app;
+  int home;
+  int volUp;
+  int volDown;
+};
+
 class CDaydreamController : public vr::ITrackedDeviceServerDriver {
 public:
   CDaydreamController(int handRole);
@@ -26,8 +35,11 @@ public:
   void RunFrame();
   std::string GetSerialNumber() const { return m_serialNumber; }
 
-private:
+  // Called from the Bluetooth notification thread with each packet from this hand's controller.
   void HandleData(const DaydreamData &data);
+  void SetMappings(const ButtonMappings &mappings);
+
+private:
   void UpdatePose(const DaydreamData &data);
   void HandleMediaKeys(const DaydreamData &data);
 
@@ -40,21 +52,18 @@ private:
   std::mutex m_poseMutex;
   vr::DriverPose_t m_pose;
 
-  vr::VRInputComponentHandle_t m_compClick; // trigger click
-  vr::VRInputComponentHandle_t m_compTriggerValue;
-  vr::VRInputComponentHandle_t m_compGrip;
-  vr::VRInputComponentHandle_t m_compTrackpadClick;
-  vr::VRInputComponentHandle_t m_compTouch;
-  vr::VRInputComponentHandle_t m_compApp;
-  vr::VRInputComponentHandle_t m_compHome;
-  vr::VRInputComponentHandle_t m_compTouchX;
-  vr::VRInputComponentHandle_t m_compTouchY;
+  vr::VRInputComponentHandle_t m_compClick = vr::k_ulInvalidInputComponentHandle; // trigger click
+  vr::VRInputComponentHandle_t m_compTriggerValue = vr::k_ulInvalidInputComponentHandle;
+  vr::VRInputComponentHandle_t m_compGrip = vr::k_ulInvalidInputComponentHandle;
+  vr::VRInputComponentHandle_t m_compTrackpadClick = vr::k_ulInvalidInputComponentHandle;
+  vr::VRInputComponentHandle_t m_compTouch = vr::k_ulInvalidInputComponentHandle;
+  vr::VRInputComponentHandle_t m_compApp = vr::k_ulInvalidInputComponentHandle;
+  vr::VRInputComponentHandle_t m_compHome = vr::k_ulInvalidInputComponentHandle;
+  vr::VRInputComponentHandle_t m_compTouchX = vr::k_ulInvalidInputComponentHandle;
+  vr::VRInputComponentHandle_t m_compTouchY = vr::k_ulInvalidInputComponentHandle;
 
-  void *m_hPipe;
-  std::atomic<bool> m_pipeRunning;
   std::atomic<bool> m_isConnected;
   bool m_isRegistered;
-  void StartPipeClient();
 
   bool m_lastVolUp;
   bool m_lastVolDown;
@@ -66,15 +75,17 @@ private:
   bool m_wantsRecenter;
   float m_yawOffset;
   float m_lastHeadYaw;
+  float m_torsoYaw;
+  bool m_torsoYawValid;
   int m_handRole;
   float m_lastTouchX;
   float m_lastTouchY;
 
-  int m_mapClick;
-  int m_mapApp;
-  int m_mapHome;
-  int m_mapVolUp;
-  int m_mapVolDown;
+  std::atomic<int> m_mapClick;
+  std::atomic<int> m_mapApp;
+  std::atomic<int> m_mapHome;
+  std::atomic<int> m_mapVolUp;
+  std::atomic<int> m_mapVolDown;
   
   bool isTargetActive(int target, const DaydreamData &data);
 };

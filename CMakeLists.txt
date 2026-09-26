@@ -20,6 +20,8 @@ add_library(driver_daydream SHARED
     src/driver_log.cpp
     src/CDaydreamProvider.cpp
     src/CDaydreamController.cpp
+    src/DaydreamBLEHandler.cpp
+    src/DaydreamConnectionManager.cpp
 )
 
 # Include directories
@@ -28,7 +30,7 @@ target_include_directories(driver_daydream PRIVATE
     src
 )
 
-# Libraries needed for C++/WinRT and standard Windows functions (like media keys)
+# Libraries needed for C++/WinRT (Bluetooth) and standard Windows functions (like media keys)
 target_link_libraries(driver_daydream PRIVATE
     windowsapp.lib
     user32.lib
@@ -64,11 +66,20 @@ add_custom_command(TARGET driver_daydream POST_BUILD
         "${CMAKE_BINARY_DIR}/daydream/bin/win64"
 )
 
-# App target
-add_executable(app_daydream WIN32 src/app_main.cpp src/DaydreamBLEHandler.cpp)
-target_link_libraries(app_daydream PRIVATE windowsapp.lib user32.lib advapi32.lib)
+# Config app target (button mapping and hand assignment)
+add_executable(app_daydream WIN32 src/app_main.cpp src/app.rc)
+target_link_libraries(app_daydream PRIVATE user32.lib advapi32.lib)
 
 set_target_properties(app_daydream PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/daydream/bin/${PLATFORM}"
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/daydream/bin/${PLATFORM}"
 )
+
+# Ship the Steam artwork alongside the config app. A separate always-run target (rather than
+# POST_BUILD) so edited images get copied even when the app itself doesn't need rebuilding.
+add_custom_target(copy_steam_assets ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/SteamAssets"
+        "${CMAKE_BINARY_DIR}/daydream/bin/${PLATFORM}/SteamAssets"
+)
+add_dependencies(app_daydream copy_steam_assets)

@@ -1,0 +1,4 @@
+#include "app_resource.h"
+
+// First icon resource is what Explorer shows for the .exe.
+IDI_APP_ICON ICON "app_icon.ico"
